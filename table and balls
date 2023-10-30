@@ -1,0 +1,52 @@
+#include <raylib.h>
+
+int main() {
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+
+    InitWindow(screenWidth, screenHeight, "Pool");
+
+    // colors in case i wanna change em
+    Color tableColor = DARKGREEN;
+    Color sideColor = DARKBROWN;
+    Color holeColor = BLACK;
+    Color cueBallColor = WHITE;
+    Color ball1Color = RED;
+    Color ball2Color = YELLOW;
+    Color ball3Color = BLUE;
+    Color ball4Color = GREEN;
+
+    const int sideThickness = 45; // got annoyed from updating each line to figure out the best thickness so its a const now lol
+
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(tableColor);
+
+        // sides of the table
+        DrawRectangle(0, 0, screenWidth, sideThickness, sideColor); // top
+        DrawRectangle(0, 0, sideThickness, screenHeight, sideColor); // left
+        DrawRectangle(0, screenHeight - sideThickness, screenWidth, sideThickness, sideColor); // bottom
+        DrawRectangle(screenWidth - sideThickness, 0, sideThickness, screenHeight, sideColor); // right
+
+        // holes in the corners
+        DrawCircle(50, 50, 40, holeColor); // top left
+        DrawCircle(screenWidth - 50, 50, 40, holeColor); // top right
+        DrawCircle(50, screenHeight - 50, 40, holeColor); // bottom left
+        DrawCircle(screenWidth - 50, screenHeight - 50, 40, holeColor); // bottom right
+
+        // cue ball
+        DrawCircle(150, screenHeight / 2, 30, cueBallColor);
+
+        // balls
+        DrawCircle(screenWidth / 2 + 50, screenHeight / 2 - 50, 30, ball1Color); // top
+        DrawCircle(screenWidth / 2 - 50 + 50, screenHeight / 2, 30, ball2Color); // middle left
+        DrawCircle(screenWidth / 2 + 50 + 50, screenHeight / 2, 30, ball3Color); // middle right
+        DrawCircle(screenWidth / 2 + 50, screenHeight / 2 + 50, 30, ball4Color); // bottom
+
+        EndDrawing();
+    }
+
+    CloseWindow();
+
+    return 0;
+}
