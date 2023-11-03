@@ -1,0 +1,245 @@
+#include <raylib.h>
+#include <raymath.h>
+#include <vector>
+
+const int screenWidth = 800;
+const int screenHeight = 600;
+const float FPS = 60;
+const float TIMESTEP = 1 / FPS; // Sets the timestep to 1 / FPS. But timestep can be any very small value.
+const float FRICTION = 1.0f;
+
+struct Ball {
+    Vector2 position;
+    float radius;
+    Color color;
+
+    float mass;
+    float inverse_mass;
+
+    Vector2 acceleration;
+    Vector2 velocity;
+
+    // constructor
+    Ball(Vector2 pos, float rad, Color col, float m, Vector2 acc, Vector2 vel)
+        : position(pos), radius(rad), color(col), mass(m), inverse_mass(1 / m),
+        acceleration(acc), velocity(vel) {}
+};
+
+// function to check if a ball is inside a hole
+bool IsBallInsideHole(const Vector2& ballPosition, const Vector2& holePosition, float holeRadius) {
+    // calculate the distance between the center of the ball and the center
+    float distance = Vector2Distance(ballPosition, holePosition);
+    // check if the distance is less than the radius of the hole
+    // if so, the ball is considered inside the hole
+    return distance < holeRadius;
+}
+
+int main() {
+    std::vector<Ball> balls;
+    // cue ball
+    Ball cueBall(Vector2{150, screenHeight / 2}, 30.0f, WHITE, 1.0f, Vector2Zero(), Vector2Zero());
+    balls.emplace_back(cueBall);
+    // other balls
+    balls.emplace_back(Vector2{screenWidth / 2 + 50, screenHeight / 2 - 50}, 30.0f, RED, 1.0f, Vector2Zero(), Vector2Zero());
+    balls.emplace_back(Vector2{screenWidth / 2, screenHeight / 2}, 30.0f, YELLOW, 1.0f, Vector2Zero(), Vector2Zero());
+    balls.emplace_back(Vector2{screenWidth / 2 + 100, screenHeight / 2}, 30.0f, BLUE, 1.0f, Vector2Zero(), Vector2Zero());
+    balls.emplace_back(Vector2{screenWidth / 2 + 50, screenHeight / 2 + 50}, 30.0f, GREEN, 1.0f, Vector2Zero(), Vector2Zero());
+    // store original positions of balls so they can reset properly
+    std::vector<Vector2> originalPositions;
+    for (const auto& ball : balls) {
+    originalPositions.push_back(ball.position);
+}
+
+    bool cueBallInMotion = false; // track the state of the cue ball
+
+    InitWindow(screenWidth, screenHeight, "Pool");
+
+    // table stuff
+    Color tableColor = DARKGREEN;
+    Color sideColor = DARKBROWN;
+    Color holeColor = BLACK;
+    const int sideThickness = 45;
+    const float holeRadius = 40.0f;
+
+    // for drawing the line when the mouse is pressed
+    bool isMousePressed = false;
+    Vector2 mousePos = {0, 0};
+
+    SetTargetFPS(FPS);
+
+    float accumulator = 0;
+
+    while (!WindowShouldClose()) {
+        float delta_time = GetFrameTime();
+        Vector2 forces = Vector2Zero();
+
+        // draw line when the mouse is held down and cue ball is not in motion
+        if (!cueBallInMotion && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            isMousePressed = true;
+            mousePos = GetMousePosition();
+        }
+
+        // ensure the line has a maximum length of 100
+        if (isMousePressed) {
+            Vector2 lineDirection = Vector2Subtract(mousePos, balls[0].position);
+            float lineLength = Vector2Length(lineDirection);
+            if (lineLength > 100.0f) {
+                // normalize the direction and set the length to 100
+                lineDirection = Vector2Normalize(lineDirection);
+                lineDirection = Vector2Scale(lineDirection, 100.0f);
+                mousePos = Vector2Add(balls[0].position, lineDirection);
+            }
+
+            // move the cue ball in the opposite direction of the line when the user lets go
+            if (IsMouseButtonUp(MOUSE_LEFT_BUTTON)) {
+                // calculate velocity from the direction vector
+                float speedModifier = 12.0f;  // this value controls the speed, adjust if necessary
+                balls[0].velocity = Vector2Scale(lineDirection, -speedModifier);
+                isMousePressed = false;
+                // set the cueBallInMotion flag to true
+                cueBallInMotion = true;
+            }
+        }
+
+        // Physics step
+        accumulator += delta_time;
+        while (accumulator >= TIMESTEP) {
+            // Do the following steps for each ball.
+            for (size_t i = 0; i < balls.size(); i++) {
+                // Increasing Velocity based on the Acceleration
+                balls[i].velocity = Vector2Add(balls[i].velocity, Vector2Scale(balls[i].acceleration, TIMESTEP));
+                // Decreasing Velocity based on the Friction
+                balls[i].velocity = Vector2Subtract(balls[i].velocity, Vector2Scale(balls[i].velocity, FRICTION * balls[i].inverse_mass * TIMESTEP));
+                // Changing the Position Based on the Velocity 
+                balls[i].position = Vector2Add(balls[i].position, Vector2Scale(balls[i].velocity, TIMESTEP));
+
+                // Check for Collision with all other balls.
+                for(size_t j = 0; j <= balls.size(); j++) {
+                    // Skip if i == j (If it's the same ball)
+                    if(i == j) {
+                        continue;
+                    }
+
+                    // Get the relative velocity and collision normal by subtracting the velocity and position of the second ball from the first ball
+                    Vector2 relative_velocity = Vector2Subtract(balls[i].velocity, balls[j].velocity);
+                    Vector2 collision_normal = Vector2Subtract(balls[i].position, balls[j].position);
+
+                    // Get the sum of radii and the distance between the center of both balls
+                    float sum_of_radii = balls[i].radius + balls[j].radius;
+                    float distance = Vector2Length(collision_normal);
+
+                    // If the distance between both balls is less than the sum of their radii
+                    // AND
+                    // If the dot product of the collision_normal and relative_velocity is less than 0
+                    // (Essentially, if the balls are overlapping AND they are approaching each other)
+                    if(distance <= sum_of_radii && Vector2DotProduct(collision_normal, relative_velocity) < 0) {
+                        // Compute for Impulse
+                        float numerator = - (1 + 1.0f) * Vector2DotProduct(collision_normal, relative_velocity);
+                        float denominator = Vector2DotProduct(collision_normal, collision_normal) * (balls[i].inverse_mass + balls[j].inverse_mass);
+                        float impulse = numerator / denominator;
+
+                        // Apply the impulse to the velocities of both balls
+                        balls[i].velocity = Vector2Add(balls[i].velocity, Vector2Scale(collision_normal, impulse * balls[i].inverse_mass));
+                        balls[j].velocity = Vector2Subtract(balls[j].velocity, Vector2Scale(collision_normal, impulse * balls[j].inverse_mass));
+                    }
+                }
+
+                // Reverse the ball's velocity on the specific axis if it exceeds the bounds of the window.
+                if(balls[i].position.x + balls[i].radius >= screenWidth || balls[i].position.x - balls[i].radius <= 0) {
+                    balls[i].velocity.x *= -1;
+                }
+                if(balls[i].position.y + balls[i].radius >= screenHeight || balls[i].position.y - balls[i].radius <= 0) {
+                    balls[i].velocity.y *= -1;
+                }
+            }
+            accumulator -= TIMESTEP;
+        }
+
+        // check if each ball is inside a hole
+        for (size_t i = 0; i < balls.size(); i++) {
+            if (IsBallInsideHole(balls[i].position, {50, 50}, holeRadius) ||
+                IsBallInsideHole(balls[i].position, {screenWidth - 50, 50}, holeRadius) ||
+                IsBallInsideHole(balls[i].position, {50, screenHeight - 50}, holeRadius) ||
+                IsBallInsideHole(balls[i].position, {screenWidth - 50, screenHeight - 50}, holeRadius)) {
+                // move the ball outside the window
+                balls[i].position = {-100, -100}; // move the ball to an arbitrary position outside the window
+                balls[i].velocity = Vector2Zero(); // stop the ball
+
+                // check if the cue ball is inside a hole
+                if (i == 0) {
+                    // reset the cue ball to its initial position
+                    balls[0].position = {150, screenHeight / 2};
+                    balls[0].velocity = Vector2Zero(); // Stop the ball
+                }
+            }
+        }
+        // check if all balls have stopped moving
+        bool allBallsStopped = true;
+        for (size_t i = 0; i < balls.size(); i++) {
+            if (Vector2Length(balls[i].velocity) > 0.1f) {
+                allBallsStopped = false;
+                break;
+            }
+        }
+
+        // if all balls have stopped moving and the cue ball was in motion, reset the cueBallInMotion flag
+        if (allBallsStopped && cueBallInMotion) {
+            cueBallInMotion = false;
+        }
+
+        // check for space bar input to reset ball positions
+        if (IsKeyPressed(KEY_SPACE)) {
+            // reset the positions and velocities of all balls
+            for (size_t i = 1; i < balls.size(); i++) {
+                balls[i].position = originalPositions[i]; // use originalPositions vector to store the original positions
+                balls[i].velocity = Vector2Zero(); // stop the balls
+            }
+
+            // reset the cue ball to its initial position
+            balls[0].position = {150, screenHeight / 2};
+            balls[0].velocity = Vector2Zero(); // stop the cue ball
+
+            // reset the cueBallInMotion flag
+            cueBallInMotion = false;
+        }
+        
+        BeginDrawing();
+        ClearBackground(tableColor);
+
+        // sides of the table
+        Rectangle topSide = {0, 0, screenWidth, sideThickness};
+        Rectangle leftSide = {0, 0, sideThickness, screenHeight};
+        Rectangle bottomSide = {0, screenHeight - sideThickness, screenWidth, sideThickness};
+        Rectangle rightSide = {screenWidth - sideThickness, 0, sideThickness, screenHeight};
+
+        DrawRectangleRec(topSide, sideColor); // top
+        DrawRectangleRec(leftSide, sideColor); // left
+        DrawRectangleRec(bottomSide, sideColor); // bottom
+        DrawRectangleRec(rightSide, sideColor); // right
+
+        // holes in the corners
+        DrawCircle(50, 50, holeRadius, holeColor); // top left
+        DrawCircle(screenWidth - 50, 50, holeRadius, holeColor); // top right
+        DrawCircle(50, screenHeight - 50, holeRadius, holeColor); // bottom left
+        DrawCircle(screenWidth - 50, screenHeight - 50, holeRadius, holeColor); // bottom right
+
+        for(size_t i = 0; i <= balls.size(); i++) {
+            DrawCircleV(balls[i].position, balls[i].radius, balls[i].color);
+        }
+
+        // draw the line on top of the cue ball
+        if (isMousePressed) {
+            DrawLineV(balls[0].position, mousePos, RED);
+        }
+
+        // Draw the indicator text
+        if (!cueBallInMotion) {
+            DrawText("Move the cue ball by clicking and dragging.", 185, 12, 20, BROWN);
+        }
+
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
