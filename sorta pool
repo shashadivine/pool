@@ -253,9 +253,9 @@ int main() {
 
         // draw the line on top of the cue ball
         if (isMousePressed) {
-            DrawLineV(balls[0].position, mousePos, RED);
+            DrawLineEx(balls[0].position, mousePos, 5, RED);
         }
-
+        
         // Draw the indicator text
         if (!cueBallInMotion) {
             DrawText("Move the cue ball by clicking and dragging!", 185, 12, 20, BROWN);
