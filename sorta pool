@@ -68,20 +68,30 @@ int main() {
     Color holeColor = BLACK;
     const int sideThickness = 45;
     const float holeRadius = 45.0f;
+
     // sides of the table
     Rectangle topSide = {0, 0, screenWidth, sideThickness};
     Rectangle leftSide = {0, 0, sideThickness, screenHeight};
     Rectangle bottomSide = {0, screenHeight - sideThickness, screenWidth, sideThickness};
     Rectangle rightSide = {screenWidth - sideThickness, 0, sideThickness, screenHeight};
 
-    // for drawing the line when the mouse is pressed
+    // array to store hole positions
+    std::vector<Vector2> holePositions;
+
+    // hole positions
+    holePositions.push_back({60, 60}); // top left
+    holePositions.push_back({screenWidth - 60, 60}); // top right
+    holePositions.push_back({60, screenHeight - 60}); // bottom left
+    holePositions.push_back({screenWidth - 60, screenHeight - 60}); // bottom right
+
+    // check if mouse is pressed for drawing the cue ball line
     bool isMousePressed = false;
+    
+    // mouse position
     Vector2 mousePos = {0, 0};
 
     InitWindow(screenWidth, screenHeight, "Pool");
-
     SetTargetFPS(FPS);
-
     float accumulator = 0;
 
     while (!WindowShouldClose()) {
@@ -176,24 +186,24 @@ int main() {
             accumulator -= TIMESTEP;
         }
 
-        // check if each ball is inside a hole
+        // check if each ball is inside a hole using the holePositions vector
         for (size_t i = 0; i < balls.size(); i++) {
-            if (isBallInsideHole(balls[i].position, {60, 60}, holeRadius) ||
-                isBallInsideHole(balls[i].position, {screenWidth - 60, 60}, holeRadius) ||
-                isBallInsideHole(balls[i].position, {60, screenHeight - 60}, holeRadius) ||
-                isBallInsideHole(balls[i].position, {screenWidth - 60, screenHeight - 60}, holeRadius)) {
-                // move the ball outside the window
-                balls[i].position = {-100, -100}; // move the ball to an arbitrary position outside the window
-                balls[i].velocity = Vector2Zero(); // stop the ball
+            for (const auto& holePosition : holePositions) {
+                if (isBallInsideHole(balls[i].position, holePosition, holeRadius)) {
+                    // move the ball outside the window
+                    balls[i].position = {-100, -100}; // move the ball to an arbitrary position outside the window
+                    balls[i].velocity = Vector2Zero(); // stop the ball
 
-                // check if the cue ball is inside a hole
-                if (i == 0) {
-                    // reset the cue ball to its initial position
-                    balls[0].position = {150, screenHeight / 2};
-                    balls[0].velocity = Vector2Zero(); // Stop the ball
+                    // check if the cue ball is inside a hole
+                    if (i == 0) {
+                        // reset the cue ball to its initial position
+                        balls[0].position = {150, screenHeight / 2};
+                        balls[0].velocity = Vector2Zero(); // Stop the ball
+                    }
                 }
             }
         }
+
         // check if all balls have stopped moving
         bool allBallsStopped = true;
         for (size_t i = 0; i < balls.size(); i++) {
@@ -234,10 +244,9 @@ int main() {
         DrawRectangleRec(rightSide, sideColor); // right
 
         // holes in the corners
-        DrawCircle(60, 60, holeRadius, holeColor); // top left
-        DrawCircle(screenWidth - 60, 60, holeRadius, holeColor); // top right
-        DrawCircle(60, screenHeight - 60, holeRadius, holeColor); // bottom left
-        DrawCircle(screenWidth - 60, screenHeight - 60, holeRadius, holeColor); // bottom right
+        for (const auto& holePosition : holePositions) {
+            DrawCircle(holePosition.x, holePosition.y, holeRadius, holeColor);
+        }
 
         // balls
         for(size_t i = 0; i <= balls.size(); i++) {
