@@ -161,23 +161,15 @@ int main() {
             }
             // AABB collision
             for (size_t i = 0; i < balls.size(); i++) {
-                // check for collision with top side
-                if (checkAABBCollision(balls[i].position, balls[i].radius, topSide)) {
+                // AABB collision with top and bottom sides
+                if (checkAABBCollision(balls[i].position, balls[i].radius, topSide) ||
+                    checkAABBCollision(balls[i].position, balls[i].radius, bottomSide)) {
                     balls[i].velocity.y *= -1; // reverse the y-component of the velocity
                 }
 
-                // check for collision with left side
-                if (checkAABBCollision(balls[i].position, balls[i].radius, leftSide)) {
-                    balls[i].velocity.x *= -1; // reverse the x-component of the velocity
-                }
-
-                // check for collision with bottom side
-                if (checkAABBCollision(balls[i].position, balls[i].radius, bottomSide)) {
-                    balls[i].velocity.y *= -1; // reverse the y-component of the velocity
-                }
-
-                // check for collision with right side
-                if (checkAABBCollision(balls[i].position, balls[i].radius, rightSide)) {
+                // AABB collision with left and right sides
+                if (checkAABBCollision(balls[i].position, balls[i].radius, leftSide) ||
+                    checkAABBCollision(balls[i].position, balls[i].radius, rightSide)) {
                     balls[i].velocity.x *= -1; // reverse the x-component of the velocity
                 }
             }
