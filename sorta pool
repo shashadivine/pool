@@ -36,12 +36,12 @@ bool checkAABBCollision(const Vector2& position, float radius, const Rectangle& 
 }
 
 // function to check if a ball is inside a hole
-bool isBallInsideHole(const Vector2& ballPosition, const Vector2& holePosition, float holeRadius, float ballRadius) {
+bool isBallInsideHole(const Vector2& ballPosition, const Vector2& holePosition, float holeRadius) {
     // calculate the distance between the center of the ball and the center of the hole
     float distance = Vector2Distance(ballPosition, holePosition);
-    // check if the distance is less than or equal to the sum of the hole's radius and half of the ball's radius
+    // check if the distance is less than or equal to the hole's radius
     // if so at least half of the ball is inside the hole and the ball is considered in the hole
-    return distance <= (holeRadius + 0.5f * ballRadius);
+    return distance <= holeRadius;
 }
 
 int main() {
@@ -186,10 +186,10 @@ int main() {
 
         // check if each ball is inside a hole
         for (size_t i = 0; i < balls.size(); i++) {
-            if (isBallInsideHole(balls[i].position, {50, 50}, holeRadius, balls[i].radius) ||
-                isBallInsideHole(balls[i].position, {screenWidth - 50, 50}, holeRadius, balls[i].radius) ||
-                isBallInsideHole(balls[i].position, {50, screenHeight - 50}, holeRadius, balls[i].radius) ||
-                isBallInsideHole(balls[i].position, {screenWidth - 50, screenHeight - 50}, holeRadius, balls[i].radius)) {
+            if (isBallInsideHole(balls[i].position, {60, 60}, holeRadius) ||
+                isBallInsideHole(balls[i].position, {screenWidth - 60, 60}, holeRadius) ||
+                isBallInsideHole(balls[i].position, {60, screenHeight - 60}, holeRadius) ||
+                isBallInsideHole(balls[i].position, {screenWidth - 60, screenHeight - 60}, holeRadius)) {
                 // move the ball outside the window
                 balls[i].position = {-100, -100}; // move the ball to an arbitrary position outside the window
                 balls[i].velocity = Vector2Zero(); // stop the ball
@@ -247,16 +247,17 @@ int main() {
         DrawCircle(60, screenHeight - 60, holeRadius, holeColor); // bottom left
         DrawCircle(screenWidth - 60, screenHeight - 60, holeRadius, holeColor); // bottom right
 
+        // balls
         for(size_t i = 0; i <= balls.size(); i++) {
             DrawCircleV(balls[i].position, balls[i].radius, balls[i].color);
         }
 
         // draw the line on top of the cue ball
         if (isMousePressed) {
-            DrawLineEx(balls[0].position, mousePos, 5, RED);
+            DrawLineEx(balls[0].position, mousePos, 5, BEIGE);
         }
         
-        // Draw the indicator text
+        // draw the cue ball indicator text on top of the screen
         if (!cueBallInMotion) {
             DrawText("Move the cue ball by clicking and dragging!", 185, 12, 20, BROWN);
         }
